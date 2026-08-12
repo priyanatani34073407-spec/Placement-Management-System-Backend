@@ -5,6 +5,7 @@ export function requireAuth(req, res, next) {
   const token = authHeader.startsWith("Bearer ")
     ? authHeader.slice(7)
     : null;
+  
   if (!token) {
     return res.status(401).json({
       success: false,

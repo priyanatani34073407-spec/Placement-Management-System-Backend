@@ -5,10 +5,14 @@ import {
   addCompany,
   updateCompany,
   deleteCompany,
+  searchCompanies,
 } from "../controllers/companyControllers.js";
 
 // Router object
 const router = express.Router();
+
+// Searching route (must come before /:id)
+router.get("/search", searchCompanies);
 
 // GET all companies
 router.get("/", getCompanies);

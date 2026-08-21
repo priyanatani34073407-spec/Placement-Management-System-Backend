@@ -66,8 +66,6 @@ Placement-Management-System-Backend/
 ├── scripts/
 │   └── seedAdmin.js
 │
-├── .env
-├── .gitignore
 ├── package.json
 ├── package-lock.json
 └── server.js

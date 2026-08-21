@@ -1,130 +1,294 @@
-Placement Management System — Backend
-A MERN-stack backend API for managing students, companies, placements, and administrator authentication. Built with Node.js, Express, MongoDB, Mongoose, and JWT.
+Placement Management System - Backend
+REST API backend for the Placement Management System. The backend provides authentication and APIs for managing students, companies, and placement records.
+Built with Node.js, Express, MongoDB, Mongoose, and JWT.
+Features
+Admin registration and login
+JWT-based authentication
+Student management
+Company management
+Placement management
+Placement statistics for reports
+Search and pagination support
+Password change functionality
+MongoDB database integration
+CORS support for the deployed frontend
+Health-check endpoint for deployment monitoring
+Tech Stack
+Technology
+Purpose
+Node.js
+JavaScript runtime
+Express.js
+REST API framework
+MongoDB
+Database
+Mongoose
+MongoDB ODM
+JWT
+Authentication
+bcryptjs
+Password hashing
+CORS
+Cross-origin request handling
+dotenv
+Environment variable management
 Project Structure
-config/          MongoDB connection configuration
-controllers/     Authentication and CRUD business logic
-middleware/      JWT authentication middleware
-models/          Mongoose schemas
-routes/          Express API routes
-scripts/         Admin seeding utility
-server.js        Express application entry point
-Setup
+Placement-Management-System-Backend-main/
+├── config/
+│   └── db.js
+├── controllers/
+│   ├── authControllers.js
+│   ├── companyControllers.js
+│   ├── placementControllers.js
+│   └── studentControllers.js
+├── middleware/
+│   └── auth.js
+├── models/
+│   ├── Company.js
+│   ├── Placement.js
+│   ├── Student.js
+│   └── User.js
+├── routes/
+│   ├── authRoutes.js
+│   ├── companyRoutes.js
+│   ├── placementRoutes.js
+│   └── studentRoutes.js
+├── scripts/
+│   └── seedAdmin.js
+├── server.js
+├── package.json
+└── package-lock.json
+Getting Started
+1. Clone the repository
+git clone <YOUR_GITHUB_REPOSITORY_URL>
+cd Placement-Management-System-Backend-main
+2. Install dependencies
 npm install
-cp .env.example .env      # set MONGO_URI and JWT_SECRET at minimum
-npm run seed                # creates the admin user from ADMIN_EMAIL/ADMIN_PASSWORD
-npm run dev                 # nodemon, http://localhost:8000
+3. Create the environment file
+Create a .env file in the project root:
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_long_random_secret
+PORT=8000
+CLIENT_ORIGIN=http://localhost:5173
+ADMIN_NAME=Admin
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=your_admin_password
+Do not commit .env or real credentials to GitHub.
+4. Create the admin user
+If you want to create the administrator account using the seed script:
+npm run seed
+The seed script uses ADMIN_NAME, ADMIN_EMAIL, and ADMIN_PASSWORD from .env.
+5. Start the development server
+npm run dev
+The API will normally be available at:
+http://localhost:8000
+6. Start the production server
+npm start
+The server uses the PORT supplied by the hosting platform and falls back to 8000 when no port is provided.
 Environment Variables
 Variable
+Required
 Description
 MONGO_URI
+Yes
 MongoDB connection string
-PORT
-Port to run the server on (default 8000)
 JWT_SECRET
-Secret used to sign/verify JWTs — use a long random value
-ADMIN_NAME
-Used only by npm run seed
-ADMIN_EMAIL
-Used only by npm run seed
-ADMIN_PASSWORD
-Used only by npm run seed
+Yes
+Secret used to sign and verify JWTs
+PORT
+No
+Server port; defaults to 8000 locally
 CLIENT_ORIGIN
-Deployed Vercel frontend origin allowed by CORS
-Run npm run seed again any time to reset the admin password to ADMIN_PASSWORD.
-Production Environment
-For Render or another production host, set the same environment variables in the hosting dashboard. Do not commit .env or real credentials to GitHub.
-Health Check
-The API exposes GET /api/health for deployment checks. A healthy response is:
-{
-  "success": true,
-  "message": "API is healthy"
-}
-Database
-The backend uses MongoDB through Mongoose. MONGO_URI must be supplied through the environment. The application validates that the variable exists before attempting a connection.
+Recommended
+Deployed frontend URL allowed by CORS
+ADMIN_NAME
+For seed
+Name used by the admin seed script
+ADMIN_EMAIL
+For seed
+Email used by the admin seed script
+ADMIN_PASSWORD
+For seed
+Password used by the admin seed script
+For production, configure these variables in the hosting provider instead of storing them in the repository.
+API Base Routes
+Resource
+Base Route
 Authentication
-All /students, /companies, and /placements routes require a valid JWT. Log in via POST /auth/login to get a token, then send it as:
-Authorization: Bearer <token>
-CORS and Frontend Integration
-Set CLIENT_ORIGIN to the deployed Vercel frontend URL. Local development also allows http://localhost:5173 and http://127.0.0.1:5173.
-The frontend should use the Render backend URL as its API base URL. Keep the existing route prefixes /auth, /students, /companies, and /placements.
+Health
+/api/health
+Public
+Authentication
+/auth
+Mixed
+Students
+/students
+Required
+Companies
+/companies
+Required
+Placements
+/placements
+Required
 API Endpoints
-Auth (/auth) — public except /me and /change-password
+Authentication
 Method
 Endpoint
 Description
+Auth
+POST
+/auth/register
+Register a user
+Public
 POST
 /auth/login
-Log in, returns { token, user }
+Login and receive a JWT
+Public
 GET
 /auth/me
-Get the logged-in admin's profile
+Get the authenticated user's profile
+Required
 PUT
 /auth/change-password
-Change the logged-in admin's password
-Students (/students) — requires auth
+Change the authenticated user's password
+Required
+Students
 Method
 Endpoint
 Description
 GET
-/students/search?q=
-Search students by name/email/phone/branch
-GET
 /students
-List students (supports page, limit, sort, order)
+Get students with pagination and sorting
+GET
+/students/search?q=
+Search students
 GET
 /students/:id
-Get a single student
+Get a student by ID
 POST
 /students
-Register a student
+Add a student
 PUT
 /students/:id
 Update a student
 DELETE
 /students/:id
 Delete a student
-Companies (/companies) — requires auth
+All student routes require authentication.
+Companies
 Method
 Endpoint
 Description
 GET
-/companies/search?q=
-Search companies by name/location/HR/email
-GET
 /companies
-List companies (supports page, limit, sort, order)
+Get companies with pagination and sorting
+GET
+/companies/search?q=
+Search companies
 GET
 /companies/:id
-Get a single company
+Get a company by ID
 POST
 /companies
-Register a company
+Add a company
 PUT
 /companies/:id
 Update a company
 DELETE
 /companies/:id
 Delete a company
-Placements (/placements) — requires auth
-Links a student to a company with a status (Applied → Shortlisted → Selected/Rejected).
+All company routes require authentication.
+Placements
 Method
 Endpoint
 Description
 GET
-/placements/stats
-Aggregate stats for the Reports page (placement rate, branch/status/top-company breakdowns)
-GET
 /placements
-List placements (supports page, limit), populated with student + company
+Get placement records
+GET
+/placements/stats
+Get placement statistics
 GET
 /placements/:id
-Get a single placement
+Get a placement by ID
 POST
 /placements
-Record a placement (student, company, package, status)
+Create a placement record
 PUT
 /placements/:id
-Update a placement (e.g. change status)
+Update a placement
 DELETE
 /placements/:id
 Delete a placement
+All placement routes require authentication.
+Authentication
+After a successful login, the API returns a JWT token.
+Send the token with protected requests using the Authorization header:
+Authorization: Bearer <JWT_TOKEN>
+The following route groups are protected:
+/students
+/companies
+/placements
+/auth/me
+/auth/change-password
+Health Check
+The backend provides a public health-check endpoint:
+GET /api/health
+Successful response:
+{
+  "success": true,
+  "message": "API is healthy"
+}
+For a Render deployment, use:
+https://YOUR-RENDER-SERVICE.onrender.com/api/health
+Frontend Integration
+The frontend is deployed separately and communicates with this backend through the Render service URL.
+Set the frontend environment variable to the backend URL:
+VITE_API_BASE_URL=https://YOUR-RENDER-SERVICE.onrender.com
+Do not append /api to VITE_API_BASE_URL, because the current API routes use /auth, /students, /companies, and /placements.
+For the backend, set:
+CLIENT_ORIGIN=https://YOUR-VERCEL-FRONTEND.vercel.app
+This allows the deployed Vercel frontend to access the API through CORS.
+Deployment on Render
+Build Command
+npm install
+Start Command
+npm start
+Required Environment Variables
+Add the following variables in the Render dashboard:
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_long_random_secret
+CLIENT_ORIGIN=https://YOUR-VERCEL-FRONTEND.vercel.app
+If the admin seed script is required:
+ADMIN_NAME=Admin
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=your_admin_password
+After deployment, verify the service using /api/health.
+MongoDB
+This project uses MongoDB through Mongoose.
+Make sure your MongoDB Atlas configuration allows connections from your hosting environment. The MONGO_URI value should be stored as an environment variable and should never be committed to the repository.
+Available Scripts
+Command
+Description
+npm install
+Install project dependencies
+npm run dev
+Start the development server with Nodemon
+npm start
+Start the production server
+npm run seed
+Create or update the admin user
+Security Notes
+Never commit .env files.
+Never expose JWT_SECRET publicly.
+Use a strong production JWT secret.
+Use a strong admin password.
+Configure CLIENT_ORIGIN with the actual deployed frontend URL.
+Keep MongoDB credentials private.
+Project Status
+Backend: Ready for local development and Render deployment.
+Frontend: Designed to communicate with the backend through the configured API base URL.
+Author
+Shaik Anas
+B.Tech - Data Science
+Chalapathi Institute of Technology

@@ -50,6 +50,13 @@ app.use("/students", requireAuth, studentRoutes);
 app.use("/companies", requireAuth, companyRoutes);
 app.use("/placements", requireAuth, placementRoutes);
 
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "API is healthy",
+  });
+});
+
 // 404 handler for unknown routes
 app.use((req, res) => {
   res.status(404).json({
@@ -71,5 +78,5 @@ const PORT = process.env.PORT || 8000;
 
 // Start Server
 app.listen(PORT, () => {
-  console.log(`Server started at http://localhost:${PORT}`);
+  console.log(`Server started on port ${PORT}`);
 });

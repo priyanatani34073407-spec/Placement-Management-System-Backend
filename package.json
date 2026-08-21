@@ -1,7 +1,7 @@
 {
   "name": "placement-management-backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "REST API for the Placement Management System built with Express, MongoDB, Mongoose, and JWT authentication.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -9,7 +9,14 @@
     "dev": "nodemon server.js",
     "seed": "node scripts/seedAdmin.js"
   },
-  "keywords": [],
+  "keywords": [
+    "node",
+    "express",
+    "mongodb",
+    "mongoose",
+    "jwt",
+    "placement-management"
+  ],
   "author": "",
   "license": "ISC",
   "type": "module",
@@ -19,7 +26,9 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^9.7.4",
+    "mongoose": "^9.7.4"
+  },
+  "devDependencies": {
     "nodemon": "^3.1.14"
   }
 }

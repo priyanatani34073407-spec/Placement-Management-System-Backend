@@ -14,8 +14,16 @@ dotenv.config();
 
 const app = express();
 
+// ===============================
 // Middleware
+// ===============================
+
 app.use(express.json());
+
+// ===============================
+// CORS Configuration
+// ===============================
+
 const allowedOrigins = [
   process.env.CLIENT_ORIGIN,
   "http://localhost:5173",
@@ -25,30 +33,30 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow non-browser requests (Postman/curl) and configured origins.
-      if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+      // Allow requests from Postman, curl, etc.
+      if (!origin) {
         return callback(null, true);
       }
-      return callback(new Error("CORS: origin not allowed"));
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("CORS: Origin not allowed"));
     },
+    credentials: true,
   })
 );
 
-// Call Database Connection
+// ===============================
+// Database Connection
+// ===============================
+
 connectDB();
 
-// Public Routes
-app.use("/auth", authRoutes);
-
-// Default Route
-app.get("/", (req, res) => {
-  res.send("Placement Management System API is Running...");
-});
-
-// Protected Routes (require a valid JWT)
-app.use("/students", requireAuth, studentRoutes);
-app.use("/companies", requireAuth, companyRoutes);
-app.use("/placements", requireAuth, placementRoutes);
+// ===============================
+// Health Check
+// ===============================
 
 app.get("/api/health", (req, res) => {
   res.status(200).json({
@@ -57,7 +65,37 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// 404 handler for unknown routes
+// ===============================
+// Root Route
+// ===============================
+
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Placement Management System API is running",
+  });
+});
+
+// ===============================
+// Authentication Routes
+// ===============================
+
+app.use("/auth", authRoutes);
+
+// ===============================
+// Protected Routes
+// ===============================
+
+app.use("/students", requireAuth, studentRoutes);
+
+app.use("/companies", requireAuth, companyRoutes);
+
+app.use("/placements", requireAuth, placementRoutes);
+
+// ===============================
+// 404 Handler
+// ===============================
+
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -65,18 +103,25 @@ app.use((req, res) => {
   });
 });
 
-// Central error handler (catches anything thrown/forwarded via next(err))
+// ===============================
+// Error Handler
+// ===============================
+
 app.use((err, req, res, next) => {
-  console.error(err);
+  console.error("Server Error:", err);
+
   res.status(err.status || 500).json({
     success: false,
-    message: err.message || "Something went wrong on the server",
+    message: err.message || "Internal server error",
   });
 });
 
+// ===============================
+// Server
+// ===============================
+
 const PORT = process.env.PORT || 8000;
 
-// Start Server
 app.listen(PORT, () => {
-  console.log(`Server started on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });

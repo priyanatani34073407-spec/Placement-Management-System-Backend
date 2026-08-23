@@ -33,7 +33,8 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests from Postman, curl, etc.
+      // Allow requests without an Origin header
+      // such as Postman, curl, or server-to-server requests.
       if (!origin) {
         return callback(null, true);
       }
@@ -104,7 +105,7 @@ app.use((req, res) => {
 });
 
 // ===============================
-// Error Handler
+// Central Error Handler
 // ===============================
 
 app.use((err, req, res, next) => {
@@ -117,10 +118,14 @@ app.use((err, req, res, next) => {
 });
 
 // ===============================
-// Server
+// Server Configuration
 // ===============================
 
 const PORT = process.env.PORT || 8000;
+
+// ===============================
+// Start Server
+// ===============================
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

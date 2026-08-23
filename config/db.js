@@ -2,9 +2,11 @@ import mongoose from "mongoose";
 
 const connectDB = async () => {
   try {
-    // Check whether MongoDB URI exists
+    // Check whether MongoDB connection string exists
     if (!process.env.MONGO_URI) {
-      throw new Error("MONGO_URI environment variable is not configured");
+      throw new Error(
+        "MONGO_URI environment variable is not configured"
+      );
     }
 
     // Connect to MongoDB
@@ -12,9 +14,10 @@ const connectDB = async () => {
 
     console.log("MongoDB Connected Successfully");
   } catch (error) {
-    console.error("MongoDB Connection Failed:", error.message);
+    console.error("MongoDB Connection Failed:");
+    console.error(error.message);
 
-    // Stop the server if database connection fails
+    // Stop the application if database connection fails
     process.exit(1);
   }
 };

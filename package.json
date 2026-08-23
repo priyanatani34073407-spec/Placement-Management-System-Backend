@@ -1,7 +1,7 @@
 {
-  "name": "placement-management-system-backend",
+  "name": "placement-management-backend",
   "version": "1.0.0",
-  "description": "Backend API for Placement Management System",
+  "description": "Backend API for the Placement Management System",
   "main": "server.js",
   "type": "module",
   "scripts": {

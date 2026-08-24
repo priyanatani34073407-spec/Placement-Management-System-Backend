@@ -1,105 +1,38 @@
 import Company from "../models/Company.js";
 
-// ======================
-// Get All Companies (with pagination + sorting)
-// ======================
-export async function getCompanies(req, res) {
+// ===============================
+// Get All Companies
+// ===============================
+
+export const getCompanies = async (req, res) => {
   try {
-    const sortField = req.query.sort || "companyName";
-    const order = req.query.order || "asc";
-    const sortOrder = order === "asc" ? 1 : -1;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 5;
-
-    const skip = (page - 1) * limit;
-
-    const totalCompanies = await Company.countDocuments();
-
-    const companies = await Company.find()
-      .skip(skip)
-      .limit(limit)
-      .sort({
-        [sortField]: sortOrder,
-      });
+    const companies = await Company.find().sort({
+      createdAt: -1,
+    });
 
     res.status(200).json({
       success: true,
+      count: companies.length,
       companies,
-      pagination: {
-        currentPage: page,
-        totalPages: Math.ceil(totalCompanies / limit),
-        totalCompanies,
-        limit,
-        hasNextPage: page < Math.ceil(totalCompanies / limit),
-        hasPrevPage: page > 1,
-      },
     });
   } catch (error) {
+    console.error("Get Companies Error:", error);
+
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Failed to fetch companies",
     });
   }
-}
+};
 
-// ======================
+// ===============================
 // Get Company By ID
-// ======================
-export async function getCompanyById(req, res) {
+// ===============================
+
+export const getCompanyById = async (req, res) => {
   try {
-    const company = await Company.findById(req.params.id);
-
-    if (!company) {
-      return res.status(404).json({
-        success: false,
-        message: "Company not found",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      company,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-}
-
-// ======================
-// Add Company
-// ======================
-export async function addCompany(req, res) {
-  try {
-    const company = await Company.create(req.body);
-
-    res.status(201).json({
-      success: true,
-      message: "Company Registered Successfully",
-      company,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-}
-
-// ======================
-// Update Company
-// ======================
-export async function updateCompany(req, res) {
-  try {
-    const company = await Company.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      {
-        new: true,
-        runValidators: true,
-      }
+    const company = await Company.findById(
+      req.params.id
     );
 
     if (!company) {
@@ -111,23 +44,71 @@ export async function updateCompany(req, res) {
 
     res.status(200).json({
       success: true,
-      message: "Company Updated Successfully",
       company,
     });
   } catch (error) {
+    console.error("Get Company Error:", error);
+
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Failed to fetch company",
     });
   }
-}
+};
 
-// ======================
-// Delete Company
-// ======================
-export async function deleteCompany(req, res) {
+// ===============================
+// Create Company
+// ===============================
+
+export const createCompany = async (req, res) => {
   try {
-    const company = await Company.findByIdAndDelete(req.params.id);
+    const {
+      companyName,
+      email,
+      phone,
+      location,
+      website,
+    } = req.body;
+
+    if (!companyName) {
+      return res.status(400).json({
+        success: false,
+        message: "Company name is required",
+      });
+    }
+
+    const company = await Company.create({
+      companyName,
+      email: email?.toLowerCase(),
+      phone,
+      location,
+      website,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Company created successfully",
+      company,
+    });
+  } catch (error) {
+    console.error("Create Company Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to create company",
+    });
+  }
+};
+
+// ===============================
+// Update Company
+// ===============================
+
+export const updateCompany = async (req, res) => {
+  try {
+    const company = await Company.findById(
+      req.params.id
+    );
 
     if (!company) {
       return res.status(404).json({
@@ -136,43 +117,75 @@ export async function deleteCompany(req, res) {
       });
     }
 
+    const {
+      companyName,
+      email,
+      phone,
+      location,
+      website,
+    } = req.body;
+
+    company.companyName =
+      companyName ?? company.companyName;
+
+    company.email =
+      email?.toLowerCase() ?? company.email;
+
+    company.phone =
+      phone ?? company.phone;
+
+    company.location =
+      location ?? company.location;
+
+    company.website =
+      website ?? company.website;
+
+    const updatedCompany = await company.save();
+
     res.status(200).json({
       success: true,
-      message: "Company Deleted Successfully",
+      message: "Company updated successfully",
+      company: updatedCompany,
     });
   } catch (error) {
+    console.error("Update Company Error:", error);
+
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Failed to update company",
     });
   }
-}
+};
 
-// ======================
-// Search Companies
-// ======================
-export async function searchCompanies(req, res) {
+// ===============================
+// Delete Company
+// ===============================
+
+export const deleteCompany = async (req, res) => {
   try {
-    const search = req.query.q || "";
+    const company = await Company.findById(
+      req.params.id
+    );
 
-    const companies = await Company.find({
-      $or: [
-        { companyName: { $regex: search, $options: "i" } },
-        { location: { $regex: search, $options: "i" } },
-        { hrName: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-        { jobRole: { $regex: search, $options: "i" } },
-      ],
-    });
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "Company not found",
+      });
+    }
+
+    await company.deleteOne();
 
     res.status(200).json({
       success: true,
-      companies,
+      message: "Company deleted successfully",
     });
   } catch (error) {
+    console.error("Delete Company Error:", error);
+
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Failed to delete company",
     });
   }
-}
+};

@@ -31,9 +31,7 @@ export const getCompanies = async (req, res) => {
 
 export const getCompanyById = async (req, res) => {
   try {
-    const company = await Company.findById(
-      req.params.id
-    );
+    const company = await Company.findById(req.params.id);
 
     if (!company) {
       return res.status(404).json({
@@ -57,45 +55,167 @@ export const getCompanyById = async (req, res) => {
 };
 
 // ===============================
-// Create Company
+// Add Company
 // ===============================
 
-export const createCompany = async (req, res) => {
+export const addCompany = async (req, res) => {
   try {
     const {
       companyName,
+      location,
+      hrName,
       email,
       phone,
-      location,
-      website,
+      package: companyPackage,
+      jobRole,
+      eligibility,
     } = req.body;
 
-    if (!companyName) {
+    // Validate required fields
+    if (
+      !companyName ||
+      !location ||
+      !hrName ||
+      !email ||
+      !phone ||
+      !companyPackage ||
+      !jobRole ||
+      !eligibility
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Company name is required",
+        message: "All company fields are required",
+      });
+    }
+
+    const normalizedEmail = String(email)
+      .trim()
+      .toLowerCase();
+
+    const normalizedPhone = String(phone).trim();
+
+    // Validate phone
+    if (!/^\d{10}$/.test(normalizedPhone)) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number must contain exactly 10 digits",
+      });
+    }
+
+    // Check duplicate company email
+    const existingCompany = await Company.findOne({
+      email: normalizedEmail,
+    });
+
+    if (existingCompany) {
+      return res.status(409).json({
+        success: false,
+        message: "A company with this email already exists",
       });
     }
 
     const company = await Company.create({
-      companyName,
-      email: email?.toLowerCase(),
-      phone,
-      location,
-      website,
+      companyName: String(companyName).trim(),
+      location: String(location).trim(),
+      hrName: String(hrName).trim(),
+      email: normalizedEmail,
+      phone: normalizedPhone,
+      package: String(companyPackage).trim(),
+      jobRole: String(jobRole).trim(),
+      eligibility: String(eligibility).trim(),
     });
 
     res.status(201).json({
       success: true,
-      message: "Company created successfully",
+      message: "Company added successfully",
       company,
     });
   } catch (error) {
-    console.error("Create Company Error:", error);
+    console.error("Add Company Error:", error);
+
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: "A company with this email already exists",
+      });
+    }
 
     res.status(500).json({
       success: false,
-      message: "Failed to create company",
+      message: "Failed to add company",
+    });
+  }
+};
+
+// ===============================
+// Search Companies
+// ===============================
+
+export const searchCompanies = async (req, res) => {
+  try {
+    const search = String(req.query.q || "").trim();
+
+    if (!search) {
+      return res.status(200).json({
+        success: true,
+        companies: [],
+      });
+    }
+
+    const companies = await Company.find({
+      $or: [
+        {
+          companyName: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+        {
+          location: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+        {
+          hrName: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+        {
+          email: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+        {
+          jobRole: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+        {
+          eligibility: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+      ],
+    }).sort({
+      companyName: 1,
+    });
+
+    res.status(200).json({
+      success: true,
+      count: companies.length,
+      companies,
+    });
+  } catch (error) {
+    console.error("Search Companies Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to search companies",
     });
   }
 };
@@ -106,9 +226,7 @@ export const createCompany = async (req, res) => {
 
 export const updateCompany = async (req, res) => {
   try {
-    const company = await Company.findById(
-      req.params.id
-    );
+    const company = await Company.findById(req.params.id);
 
     if (!company) {
       return res.status(404).json({
@@ -119,26 +237,55 @@ export const updateCompany = async (req, res) => {
 
     const {
       companyName,
+      location,
+      hrName,
       email,
       phone,
-      location,
-      website,
+      package: companyPackage,
+      jobRole,
+      eligibility,
     } = req.body;
 
-    company.companyName =
-      companyName ?? company.companyName;
+    if (companyName !== undefined) {
+      company.companyName = String(companyName).trim();
+    }
 
-    company.email =
-      email?.toLowerCase() ?? company.email;
+    if (location !== undefined) {
+      company.location = String(location).trim();
+    }
 
-    company.phone =
-      phone ?? company.phone;
+    if (hrName !== undefined) {
+      company.hrName = String(hrName).trim();
+    }
 
-    company.location =
-      location ?? company.location;
+    if (email !== undefined) {
+      company.email = String(email).trim().toLowerCase();
+    }
 
-    company.website =
-      website ?? company.website;
+    if (phone !== undefined) {
+      const normalizedPhone = String(phone).trim();
+
+      if (!/^\d{10}$/.test(normalizedPhone)) {
+        return res.status(400).json({
+          success: false,
+          message: "Phone number must contain exactly 10 digits",
+        });
+      }
+
+      company.phone = normalizedPhone;
+    }
+
+    if (companyPackage !== undefined) {
+      company.package = String(companyPackage).trim();
+    }
+
+    if (jobRole !== undefined) {
+      company.jobRole = String(jobRole).trim();
+    }
+
+    if (eligibility !== undefined) {
+      company.eligibility = String(eligibility).trim();
+    }
 
     const updatedCompany = await company.save();
 
@@ -149,6 +296,13 @@ export const updateCompany = async (req, res) => {
     });
   } catch (error) {
     console.error("Update Company Error:", error);
+
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: "Another company already uses this email",
+      });
+    }
 
     res.status(500).json({
       success: false,
@@ -163,9 +317,7 @@ export const updateCompany = async (req, res) => {
 
 export const deleteCompany = async (req, res) => {
   try {
-    const company = await Company.findById(
-      req.params.id
-    );
+    const company = await Company.findById(req.params.id);
 
     if (!company) {
       return res.status(404).json({

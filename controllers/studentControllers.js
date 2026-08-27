@@ -6,14 +6,45 @@ import Student from "../models/Student.js";
 
 export const getStudents = async (req, res) => {
   try {
-    const students = await Student.find().sort({
-      createdAt: -1,
-    });
+    const page = Math.max(
+      parseInt(req.query.page, 10) || 1,
+      1
+    );
+
+    const limit = Math.min(
+      Math.max(
+        parseInt(req.query.limit, 10) || 10,
+        1
+      ),
+      100
+    );
+
+    const skip = (page - 1) * limit;
+
+    const totalStudents = await Student.countDocuments();
+
+    const students = await Student.find()
+      .sort({
+        createdAt: -1,
+      })
+      .skip(skip)
+      .limit(limit);
+
+    const totalPages = Math.ceil(
+      totalStudents / limit
+    );
 
     res.status(200).json({
       success: true,
-      count: students.length,
       students,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalStudents,
+        limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
     });
   } catch (error) {
     console.error("Get Students Error:", error);
@@ -29,7 +60,7 @@ export const getStudents = async (req, res) => {
 // Get Student By ID
 // ===============================
 
-export const getStudentById = async (req, res) => {
+export const getStudentsById = async (req, res) => {
   try {
     const student = await Student.findById(req.params.id);
 
@@ -55,10 +86,10 @@ export const getStudentById = async (req, res) => {
 };
 
 // ===============================
-// Create Student
+// Add Student
 // ===============================
 
-export const createStudent = async (req, res) => {
+export const addStudent = async (req, res) => {
   try {
     const {
       studentName,
@@ -69,44 +100,102 @@ export const createStudent = async (req, res) => {
     } = req.body;
 
     // Validate required fields
-    if (!studentName || !email || !branch) {
+    if (
+      !studentName ||
+      !email ||
+      !phone ||
+      !branch ||
+      cgpa === undefined ||
+      cgpa === ""
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Student name, email and branch are required",
+        message: "All student fields are required",
+      });
+    }
+
+    const normalizedEmail = String(email)
+      .trim()
+      .toLowerCase();
+
+    const normalizedPhone = String(phone).trim();
+
+    const numericCgpa = Number(cgpa);
+
+    // Validate phone
+    if (!/^\d{10}$/.test(normalizedPhone)) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number must contain exactly 10 digits",
+      });
+    }
+
+    // Validate CGPA
+    if (
+      Number.isNaN(numericCgpa) ||
+      numericCgpa < 0 ||
+      numericCgpa > 10
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "CGPA must be between 0 and 10",
+      });
+    }
+
+    // Validate branch
+    const allowedBranches = [
+      "CSE",
+      "CSM",
+      "CSE-AI",
+      "CIVIL",
+      "DS",
+    ];
+
+    if (!allowedBranches.includes(branch)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid branch",
       });
     }
 
     // Check duplicate email
     const existingStudent = await Student.findOne({
-      email: email.toLowerCase(),
+      email: normalizedEmail,
     });
 
     if (existingStudent) {
       return res.status(409).json({
         success: false,
-        message: "Student with this email already exists",
+        message: "A student with this email already exists",
       });
     }
 
     const student = await Student.create({
-      studentName,
-      email: email.toLowerCase(),
-      phone,
+      studentName: String(studentName).trim(),
+      email: normalizedEmail,
+      phone: normalizedPhone,
       branch,
-      cgpa,
+      cgpa: numericCgpa,
     });
 
     res.status(201).json({
       success: true,
-      message: "Student created successfully",
+      message: "Student Registered Successfully",
       student,
     });
   } catch (error) {
-    console.error("Create Student Error:", error);
+    console.error("Add Student Error:", error);
+
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: "A student with this email already exists",
+      });
+    }
 
     res.status(500).json({
       success: false,
-      message: "Failed to create student",
+      message: "Failed to register student",
     });
   }
 };
@@ -117,9 +206,7 @@ export const createStudent = async (req, res) => {
 
 export const updateStudent = async (req, res) => {
   try {
-    const student = await Student.findById(
-      req.params.id
-    );
+    const student = await Student.findById(req.params.id);
 
     if (!student) {
       return res.status(404).json({
@@ -136,26 +223,86 @@ export const updateStudent = async (req, res) => {
       cgpa,
     } = req.body;
 
-    student.studentName =
-      studentName ?? student.studentName;
+    if (studentName !== undefined) {
+      student.studentName = String(studentName).trim();
+    }
 
-    student.email =
-      email?.toLowerCase() ?? student.email;
+    if (email !== undefined) {
+      const normalizedEmail = String(email)
+        .trim()
+        .toLowerCase();
 
-    student.phone =
-      phone ?? student.phone;
+      const existingStudent = await Student.findOne({
+        email: normalizedEmail,
+        _id: { $ne: student._id },
+      });
 
-    student.branch =
-      branch ?? student.branch;
+      if (existingStudent) {
+        return res.status(409).json({
+          success: false,
+          message:
+            "Another student already uses this email",
+        });
+      }
 
-    student.cgpa =
-      cgpa ?? student.cgpa;
+      student.email = normalizedEmail;
+    }
+
+    if (phone !== undefined) {
+      const normalizedPhone = String(phone).trim();
+
+      if (!/^\d{10}$/.test(normalizedPhone)) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Phone number must contain exactly 10 digits",
+        });
+      }
+
+      student.phone = normalizedPhone;
+    }
+
+    if (branch !== undefined) {
+      const allowedBranches = [
+        "CSE",
+        "CSM",
+        "CSE-AI",
+        "CIVIL",
+        "DS",
+      ];
+
+      if (!allowedBranches.includes(branch)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid branch",
+        });
+      }
+
+      student.branch = branch;
+    }
+
+    if (cgpa !== undefined) {
+      const numericCgpa = Number(cgpa);
+
+      if (
+        Number.isNaN(numericCgpa) ||
+        numericCgpa < 0 ||
+        numericCgpa > 10
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "CGPA must be between 0 and 10",
+        });
+      }
+
+      student.cgpa = numericCgpa;
+    }
 
     const updatedStudent = await student.save();
 
     res.status(200).json({
       success: true,
-      message: "Student updated successfully",
+      message: "Student Updated Successfully",
       student: updatedStudent,
     });
   } catch (error) {
@@ -174,9 +321,7 @@ export const updateStudent = async (req, res) => {
 
 export const deleteStudent = async (req, res) => {
   try {
-    const student = await Student.findById(
-      req.params.id
-    );
+    const student = await Student.findById(req.params.id);
 
     if (!student) {
       return res.status(404).json({
@@ -189,7 +334,7 @@ export const deleteStudent = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Student deleted successfully",
+      message: "Student Deleted Successfully",
     });
   } catch (error) {
     console.error("Delete Student Error:", error);
@@ -197,6 +342,67 @@ export const deleteStudent = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to delete student",
+    });
+  }
+};
+
+// ===============================
+// Search Students
+// ===============================
+
+export const searchStudents = async (req, res) => {
+  try {
+    const search = String(req.query.q || "").trim();
+
+    if (!search) {
+      return res.status(200).json({
+        success: true,
+        students: [],
+      });
+    }
+
+    const students = await Student.find({
+      $or: [
+        {
+          studentName: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+        {
+          email: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+        {
+          phone: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+        {
+          branch: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+      ],
+    }).sort({
+      studentName: 1,
+    });
+
+    res.status(200).json({
+      success: true,
+      count: students.length,
+      students,
+    });
+  } catch (error) {
+    console.error("Search Students Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to search students",
     });
   }
 };

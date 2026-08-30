@@ -4,54 +4,31 @@ import Student from "../models/Student.js";
 // Get All Students
 // ===============================
 
-export const getStudents = async (req, res) => {
+export const getStudents = async (
+  req,
+  res
+) => {
   try {
-    const page = Math.max(
-      parseInt(req.query.page, 10) || 1,
-      1
-    );
-
-    const limit = Math.min(
-      Math.max(
-        parseInt(req.query.limit, 10) || 10,
-        1
-      ),
-      100
-    );
-
-    const skip = (page - 1) * limit;
-
-    const totalStudents = await Student.countDocuments();
-
-    const students = await Student.find()
-      .sort({
+    const students =
+      await Student.find().sort({
         createdAt: -1,
-      })
-      .skip(skip)
-      .limit(limit);
-
-    const totalPages = Math.ceil(
-      totalStudents / limit
-    );
+      });
 
     res.status(200).json({
       success: true,
+      count: students.length,
       students,
-      pagination: {
-        currentPage: page,
-        totalPages,
-        totalStudents,
-        limit,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1,
-      },
     });
   } catch (error) {
-    console.error("Get Students Error:", error);
+    console.error(
+      "Get Students Error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
-      message: "Failed to fetch students",
+      message:
+        "Failed to fetch students",
     });
   }
 };
@@ -60,9 +37,15 @@ export const getStudents = async (req, res) => {
 // Get Student By ID
 // ===============================
 
-export const getStudentsById = async (req, res) => {
+export const getStudentsById = async (
+  req,
+  res
+) => {
   try {
-    const student = await Student.findById(req.params.id);
+    const student =
+      await Student.findById(
+        req.params.id
+      );
 
     if (!student) {
       return res.status(404).json({
@@ -76,11 +59,15 @@ export const getStudentsById = async (req, res) => {
       student,
     });
   } catch (error) {
-    console.error("Get Student Error:", error);
+    console.error(
+      "Get Student Error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
-      message: "Failed to fetch student",
+      message:
+        "Failed to fetch student",
     });
   }
 };
@@ -89,7 +76,10 @@ export const getStudentsById = async (req, res) => {
 // Add Student
 // ===============================
 
-export const addStudent = async (req, res) => {
+export const addStudent = async (
+  req,
+  res
+) => {
   try {
     const {
       studentName,
@@ -99,7 +89,6 @@ export const addStudent = async (req, res) => {
       cgpa,
     } = req.body;
 
-    // Validate required fields
     if (
       !studentName ||
       !email ||
@@ -110,23 +99,35 @@ export const addStudent = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: "All student fields are required",
+        message:
+          "All student fields are required",
       });
     }
 
-    const normalizedEmail = String(email)
-      .trim()
-      .toLowerCase();
+    const normalizedName =
+      String(studentName).trim();
 
-    const normalizedPhone = String(phone).trim();
+    const normalizedEmail =
+      String(email)
+        .trim()
+        .toLowerCase();
 
-    const numericCgpa = Number(cgpa);
+    const normalizedPhone =
+      String(phone).trim();
+
+    const numericCgpa =
+      Number(cgpa);
 
     // Validate phone
-    if (!/^\d{10}$/.test(normalizedPhone)) {
+    if (
+      !/^\d{10}$/.test(
+        normalizedPhone
+      )
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Phone number must contain exactly 10 digits",
+        message:
+          "Phone number must contain exactly 10 digits",
       });
     }
 
@@ -138,7 +139,8 @@ export const addStudent = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: "CGPA must be between 0 and 10",
+        message:
+          "CGPA must be between 0 and 10",
       });
     }
 
@@ -151,7 +153,11 @@ export const addStudent = async (req, res) => {
       "DS",
     ];
 
-    if (!allowedBranches.includes(branch)) {
+    if (
+      !allowedBranches.includes(
+        branch
+      )
+    ) {
       return res.status(400).json({
         success: false,
         message: "Invalid branch",
@@ -159,43 +165,53 @@ export const addStudent = async (req, res) => {
     }
 
     // Check duplicate email
-    const existingStudent = await Student.findOne({
-      email: normalizedEmail,
-    });
+    const existingStudent =
+      await Student.findOne({
+        email: normalizedEmail,
+      });
 
     if (existingStudent) {
       return res.status(409).json({
         success: false,
-        message: "A student with this email already exists",
+        message:
+          "Student with this email already exists",
       });
     }
 
-    const student = await Student.create({
-      studentName: String(studentName).trim(),
-      email: normalizedEmail,
-      phone: normalizedPhone,
-      branch,
-      cgpa: numericCgpa,
-    });
+    const student =
+      await Student.create({
+        studentName:
+          normalizedName,
+        email: normalizedEmail,
+        phone: normalizedPhone,
+        branch,
+        cgpa: numericCgpa,
+      });
 
     res.status(201).json({
       success: true,
-      message: "Student Registered Successfully",
+      message:
+        "Student created successfully",
       student,
     });
   } catch (error) {
-    console.error("Add Student Error:", error);
+    console.error(
+      "Add Student Error:",
+      error
+    );
 
     if (error.code === 11000) {
       return res.status(409).json({
         success: false,
-        message: "A student with this email already exists",
+        message:
+          "Student with this email already exists",
       });
     }
 
     res.status(500).json({
       success: false,
-      message: "Failed to register student",
+      message:
+        "Failed to create student",
     });
   }
 };
@@ -204,9 +220,15 @@ export const addStudent = async (req, res) => {
 // Update Student
 // ===============================
 
-export const updateStudent = async (req, res) => {
+export const updateStudent = async (
+  req,
+  res
+) => {
   try {
-    const student = await Student.findById(req.params.id);
+    const student =
+      await Student.findById(
+        req.params.id
+      );
 
     if (!student) {
       return res.status(404).json({
@@ -224,20 +246,25 @@ export const updateStudent = async (req, res) => {
     } = req.body;
 
     if (studentName !== undefined) {
-      student.studentName = String(studentName).trim();
+      student.studentName =
+        String(studentName).trim();
     }
 
     if (email !== undefined) {
-      const normalizedEmail = String(email)
-        .trim()
-        .toLowerCase();
+      const normalizedEmail =
+        String(email)
+          .trim()
+          .toLowerCase();
 
-      const existingStudent = await Student.findOne({
-        email: normalizedEmail,
-        _id: { $ne: student._id },
-      });
+      const duplicate =
+        await Student.findOne({
+          email: normalizedEmail,
+          _id: {
+            $ne: student._id,
+          },
+        });
 
-      if (existingStudent) {
+      if (duplicate) {
         return res.status(409).json({
           success: false,
           message:
@@ -245,13 +272,19 @@ export const updateStudent = async (req, res) => {
         });
       }
 
-      student.email = normalizedEmail;
+      student.email =
+        normalizedEmail;
     }
 
     if (phone !== undefined) {
-      const normalizedPhone = String(phone).trim();
+      const normalizedPhone =
+        String(phone).trim();
 
-      if (!/^\d{10}$/.test(normalizedPhone)) {
+      if (
+        !/^\d{10}$/.test(
+          normalizedPhone
+        )
+      ) {
         return res.status(400).json({
           success: false,
           message:
@@ -259,7 +292,8 @@ export const updateStudent = async (req, res) => {
         });
       }
 
-      student.phone = normalizedPhone;
+      student.phone =
+        normalizedPhone;
     }
 
     if (branch !== undefined) {
@@ -271,10 +305,15 @@ export const updateStudent = async (req, res) => {
         "DS",
       ];
 
-      if (!allowedBranches.includes(branch)) {
+      if (
+        !allowedBranches.includes(
+          branch
+        )
+      ) {
         return res.status(400).json({
           success: false,
-          message: "Invalid branch",
+          message:
+            "Invalid branch",
         });
       }
 
@@ -282,7 +321,8 @@ export const updateStudent = async (req, res) => {
     }
 
     if (cgpa !== undefined) {
-      const numericCgpa = Number(cgpa);
+      const numericCgpa =
+        Number(cgpa);
 
       if (
         Number.isNaN(numericCgpa) ||
@@ -291,26 +331,34 @@ export const updateStudent = async (req, res) => {
       ) {
         return res.status(400).json({
           success: false,
-          message: "CGPA must be between 0 and 10",
+          message:
+            "CGPA must be between 0 and 10",
         });
       }
 
-      student.cgpa = numericCgpa;
+      student.cgpa =
+        numericCgpa;
     }
 
-    const updatedStudent = await student.save();
+    const updatedStudent =
+      await student.save();
 
     res.status(200).json({
       success: true,
-      message: "Student Updated Successfully",
+      message:
+        "Student updated successfully",
       student: updatedStudent,
     });
   } catch (error) {
-    console.error("Update Student Error:", error);
+    console.error(
+      "Update Student Error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
-      message: "Failed to update student",
+      message:
+        "Failed to update student",
     });
   }
 };
@@ -319,9 +367,15 @@ export const updateStudent = async (req, res) => {
 // Delete Student
 // ===============================
 
-export const deleteStudent = async (req, res) => {
+export const deleteStudent = async (
+  req,
+  res
+) => {
   try {
-    const student = await Student.findById(req.params.id);
+    const student =
+      await Student.findById(
+        req.params.id
+      );
 
     if (!student) {
       return res.status(404).json({
@@ -334,14 +388,19 @@ export const deleteStudent = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Student Deleted Successfully",
+      message:
+        "Student deleted successfully",
     });
   } catch (error) {
-    console.error("Delete Student Error:", error);
+    console.error(
+      "Delete Student Error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
-      message: "Failed to delete student",
+      message:
+        "Failed to delete student",
     });
   }
 };
@@ -350,47 +409,53 @@ export const deleteStudent = async (req, res) => {
 // Search Students
 // ===============================
 
-export const searchStudents = async (req, res) => {
+export const searchStudents = async (
+  req,
+  res
+) => {
   try {
-    const search = String(req.query.q || "").trim();
+    const search =
+      String(req.query.q || "").trim();
 
     if (!search) {
       return res.status(200).json({
         success: true,
+        count: 0,
         students: [],
       });
     }
 
-    const students = await Student.find({
-      $or: [
-        {
-          studentName: {
-            $regex: search,
-            $options: "i",
+    const students =
+      await Student.find({
+        $or: [
+          {
+            studentName: {
+              $regex: search,
+              $options: "i",
+            },
           },
-        },
-        {
-          email: {
-            $regex: search,
-            $options: "i",
+          {
+            email: {
+              $regex: search,
+              $options: "i",
+            },
           },
-        },
-        {
-          phone: {
-            $regex: search,
-            $options: "i",
+          {
+            phone: {
+              $regex: search,
+              $options: "i",
+            },
           },
-        },
-        {
-          branch: {
-            $regex: search,
-            $options: "i",
+          {
+            branch: {
+              $regex: search,
+              $options: "i",
+            },
           },
-        },
-      ],
-    }).sort({
-      studentName: 1,
-    });
+        ],
+      }).sort({
+        studentName: 1,
+      });
 
     res.status(200).json({
       success: true,
@@ -398,11 +463,15 @@ export const searchStudents = async (req, res) => {
       students,
     });
   } catch (error) {
-    console.error("Search Students Error:", error);
+    console.error(
+      "Search Students Error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
-      message: "Failed to search students",
+      message:
+        "Failed to search students",
     });
   }
 };

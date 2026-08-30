@@ -6,13 +6,16 @@ import User from "../models/User.js";
 // Generate JWT Token
 // ===============================
 
-const generateToken = (userId) => {
+const generateToken = (userId, role) => {
   if (!process.env.JWT_SECRET) {
     throw new Error("JWT_SECRET is not configured");
   }
 
   return jwt.sign(
-    { id: userId },
+    {
+      id: userId,
+      role,
+    },
     process.env.JWT_SECRET,
     {
       expiresIn: "7d",
@@ -34,11 +37,7 @@ export const register = async (req, res) => {
     } = req.body;
 
     // Validate required fields
-    if (
-      !name ||
-      !email ||
-      !password
-    ) {
+    if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
         message:
@@ -67,7 +66,8 @@ export const register = async (req, res) => {
     if (!emailRegex.test(normalizedEmail)) {
       return res.status(400).json({
         success: false,
-        message: "Please enter a valid email address",
+        message:
+          "Please enter a valid email address",
       });
     }
 
@@ -80,11 +80,11 @@ export const register = async (req, res) => {
       });
     }
 
-    // Only allow valid roles
+    // Only allow roles defined by User model
     const userRole =
       role === "admin" ? "admin" : "student";
 
-    // Check existing user
+    // Check duplicate email
     const existingUser =
       await User.findOne({
         email: normalizedEmail,
@@ -100,7 +100,10 @@ export const register = async (req, res) => {
 
     // Hash password
     const hashedPassword =
-      await bcrypt.hash(password, 10);
+      await bcrypt.hash(
+        String(password),
+        10
+      );
 
     // Create user
     const user = await User.create({
@@ -110,8 +113,11 @@ export const register = async (req, res) => {
       role: userRole,
     });
 
-    // Generate JWT
-    const token = generateToken(user._id);
+    // Generate token
+    const token = generateToken(
+      user._id,
+      user.role
+    );
 
     res.status(201).json({
       success: true,
@@ -131,7 +137,6 @@ export const register = async (req, res) => {
       error
     );
 
-    // MongoDB duplicate key
     if (error.code === 11000) {
       return res.status(409).json({
         success: false,
@@ -142,7 +147,8 @@ export const register = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Registration failed",
+      message:
+        "Registration failed",
     });
   }
 };
@@ -158,7 +164,6 @@ export const login = async (req, res) => {
       password,
     } = req.body;
 
-    // Validate input
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -172,9 +177,7 @@ export const login = async (req, res) => {
         .trim()
         .toLowerCase();
 
-    // Find user
-    // Password has select:false in User model,
-    // so explicitly select it here.
+    // Password uses select:false in User model
     const user =
       await User.findOne({
         email: normalizedEmail,
@@ -188,7 +191,6 @@ export const login = async (req, res) => {
       });
     }
 
-    // Compare password
     const passwordMatch =
       await bcrypt.compare(
         String(password),
@@ -203,9 +205,10 @@ export const login = async (req, res) => {
       });
     }
 
-    // Generate token
-    const token =
-      generateToken(user._id);
+    const token = generateToken(
+      user._id,
+      user.role
+    );
 
     res.status(200).json({
       success: true,
@@ -311,9 +314,7 @@ export const changePassword = async (
       });
     }
 
-    if (
-      String(newPassword).length < 6
-    ) {
+    if (String(newPassword).length < 6) {
       return res.status(400).json({
         success: false,
         message:
@@ -333,14 +334,13 @@ export const changePassword = async (
       });
     }
 
-    // Verify current password
-    const passwordMatch =
+    const currentPasswordMatch =
       await bcrypt.compare(
         String(currentPassword),
         user.password
       );
 
-    if (!passwordMatch) {
+    if (!currentPasswordMatch) {
       return res.status(401).json({
         success: false,
         message:
@@ -348,7 +348,6 @@ export const changePassword = async (
       });
     }
 
-    // Prevent reusing the same password
     const samePassword =
       await bcrypt.compare(
         String(newPassword),
@@ -363,7 +362,6 @@ export const changePassword = async (
       });
     }
 
-    // Hash new password
     user.password =
       await bcrypt.hash(
         String(newPassword),

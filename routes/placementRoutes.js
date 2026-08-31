@@ -1,4 +1,5 @@
 import express from "express";
+
 import {
   getPlacements,
   getPlacementById,
@@ -8,24 +9,62 @@ import {
   getPlacementStats,
 } from "../controllers/placementControllers.js";
 
-const router = express.Router();
+const router =
+  express.Router();
 
-// GET aggregate stats (for Reports page) — before /:id
-router.get("/stats", getPlacementStats);
+// ===============================
+// Placement Statistics
+// IMPORTANT: Must come before /:id
+// ===============================
 
-// GET all placements
-router.get("/", getPlacements);
+router.get(
+  "/stats",
+  getPlacementStats
+);
 
-// GET placement by ID
-router.get("/:id", getPlacementById);
+// ===============================
+// Get All Placements
+// ===============================
 
-// POST record a placement
-router.post("/", addPlacement);
+router.get(
+  "/",
+  getPlacements
+);
 
-// PUT update a placement
-router.put("/:id", updatePlacement);
+// ===============================
+// Get Placement By ID
+// ===============================
 
-// DELETE a placement
-router.delete("/:id", deletePlacement);
+router.get(
+  "/:id",
+  getPlacementById
+);
+
+// ===============================
+// Add Placement
+// ===============================
+
+router.post(
+  "/",
+  addPlacement
+);
+
+// ===============================
+// Update Placement
+// ===============================
+
+router.put(
+  "/:id",
+  updatePlacement
+);
+
+// ===============================
+// Delete Placement
+// ===============================
+
+router.delete(
+  "/:id",
+  deletePlacement
+);
 
 export default router;

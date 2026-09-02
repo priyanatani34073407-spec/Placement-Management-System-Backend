@@ -1,40 +1,151 @@
-// Creates (or updates the password of) the initial admin user.
-// Run with: npm run seed
+// ==========================================
+// Admin User Seeder
+// ==========================================
+// Run:
+// npm run seed
+
 import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
+
 import connectDB from "../config/db.js";
 import User from "../models/User.js";
 
 dotenv.config();
 
+// ==========================================
+// Seed Admin
+// ==========================================
+
 async function seedAdmin() {
-  const email = (process.env.ADMIN_EMAIL || "admin@gmail.com").toLowerCase();
-  const password = process.env.ADMIN_PASSWORD || "Admin@123";
-  const name = process.env.ADMIN_NAME || "Admin";
+  try {
+    const email = (
+      process.env.ADMIN_EMAIL ||
+      "admin@gmail.com"
+    )
+      .trim()
+      .toLowerCase();
 
-  await connectDB();
+    const password =
+      process.env.ADMIN_PASSWORD ||
+      "Admin@123";
 
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt);
+    const name =
+      process.env.ADMIN_NAME ||
+      "Admin";
 
-  const existing = await User.findOne({ email });
+    // Basic validation
+    if (!email) {
+      throw new Error(
+        "ADMIN_EMAIL cannot be empty"
+      );
+    }
 
-  if (existing) {
-    existing.password = hashedPassword;
-    existing.name = name;
-    await existing.save();
-    console.log(`✅ Admin user updated: ${email}`);
-  } else {
-    await User.create({ name, email, password: hashedPassword, role: "admin" });
-    console.log(`✅ Admin user created: ${email}`);
+    if (!password) {
+      throw new Error(
+        "ADMIN_PASSWORD cannot be empty"
+      );
+    }
+
+    if (password.length < 6) {
+      throw new Error(
+        "ADMIN_PASSWORD must contain at least 6 characters"
+      );
+    }
+
+    if (!name.trim()) {
+      throw new Error(
+        "ADMIN_NAME cannot be empty"
+      );
+    }
+
+    // Connect to database
+    await connectDB();
+
+    console.log(
+      "Checking admin account..."
+    );
+
+    const existingAdmin =
+      await User.findOne({
+        email,
+      }).select("+password");
+
+    // ======================================
+    // Update Existing Admin
+    // ======================================
+
+    if (existingAdmin) {
+      const passwordHash =
+        await bcrypt.hash(
+          password,
+          10
+        );
+
+      existingAdmin.name =
+        name.trim();
+
+      existingAdmin.password =
+        passwordHash;
+
+      existingAdmin.role =
+        "admin";
+
+      await existingAdmin.save();
+
+      console.log(
+        `✅ Admin user updated: ${email}`
+      );
+    }
+
+    // ======================================
+    // Create New Admin
+    // ======================================
+
+    else {
+      const passwordHash =
+        await bcrypt.hash(
+          password,
+          10
+        );
+
+      await User.create({
+        name: name.trim(),
+        email,
+        password: passwordHash,
+        role: "admin",
+      });
+
+      console.log(
+        `✅ Admin user created: ${email}`
+      );
+    }
+
+    console.log(
+      "✅ Admin seeding completed successfully"
+    );
+  } catch (error) {
+    console.error(
+      "❌ Failed to seed admin user:"
+    );
+
+    console.error(
+      error.message
+    );
+
+    process.exitCode = 1;
+  } finally {
+    // Close MongoDB connection
+    if (
+      mongoose.connection.readyState !== 0
+    ) {
+      await mongoose.connection.close();
+
+      console.log(
+        "MongoDB connection closed"
+      );
+    }
   }
-
-  await mongoose.connection.close();
-  process.exit(0);
 }
 
-seedAdmin().catch((error) => {
-  console.error("❌ Failed to seed admin user:", error.message);
-  process.exit(1);
-});
+seedAdmin();
